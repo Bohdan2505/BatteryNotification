@@ -1,4 +1,4 @@
-# BatteryNotification #python3.8
+# BatteryNotification 
 Project for desktop (windows, macOS X, linux - using crossplatform library). Displaying notification about any battery charge
 
 Notebook / Laptop Battery Notification is a simple and practical program that allows you to increase the battery charge status. Freedom is available to you.
