@@ -1,7 +1,7 @@
 # BatteryNotification 
-Project for desktop (windows, macOS X, linux - using crossplatform library). Displaying notification about any battery charge
+Project for laptop (windows, macOS X, linux - using crossplatform library). Displaying notification about any battery charge
 
-Notebook / Laptop Battery Notification is a simple and practical program that allows you to increase the battery charge status. Freedom is available to you.
+Laptop Battery Notification is a simple and practical program that allows you to increase the battery charge status. Freedom is available to you.
 The program is available for laptops / laptops with operating systems Linux, Microsoft Windows, macOS.
 Functions:
 - displaying the charge of the battery in the devices;
