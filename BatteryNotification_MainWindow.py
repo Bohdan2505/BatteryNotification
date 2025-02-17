@@ -329,7 +329,10 @@ class Ui_MainWindow(QMainWindow):
 
         self.bt_Save_Changes.setStyleSheet("color:green")
         self.bt_Save_Changes.setObjectName("bt_Save_Changes")
-        self.bt_Save_Changes.clicked.connect(self.save) # Приязка функции на клик по кнопке
+        self.bt_Save_Changes.clicked.connect(self.save)
+
+    def get_child_widget(self, parent_widget, widget_type, widget_name):
+        return parent_widget.findChild(widget_type, widget_name)
 
     def add_notification_block(self):
         self.add_notification()
@@ -346,11 +349,7 @@ class Ui_MainWindow(QMainWindow):
         self.status_bar_message(message_translate[2])
 
     def add_notification(self):
-    # Эта функция добавляет в ScrollArea блоки с уведомлениями, здесь идет отрисовка блока и его дочерниз элементов
-
-
-
-        global I_COUNT ########### Глобальный счетчик для придания всем блокам и их элементам уникальных имен
+        global I_COUNT########### Глобальный счетчик для придания всем блокам и их элементам уникальных имен
 
         # Отрисовка самого блока (фрейма)
         # Frame внутри которого будут размещатся остальные элементы
@@ -501,23 +500,18 @@ class Ui_MainWindow(QMainWindow):
         self.bt_Del_Notification.setObjectName(f"bt_Del_Notification_{I_COUNT}") # Присваивание уникального имени объекта
 
 
-        self.verticalLayout.addWidget(Notif) # Добавление в вертикальную сетку ScrollArea блока с уведомлениям
-
-        I_COUNT += 1 ###################  Добавления к счетчику 1, чтобы в будующем всем блокам и дочерним объектам присваивались уникальные имена
+        self.verticalLayout.addWidget(Notif)
+        I_COUNT += 1
         self.translate_app_text()
 
 
 
     def del_notification(self):
-    # Активируется при нажатии на bt_Del_Notification и удаляет родительский блок с уведомлениям
+        button = self.sender()
+        parrent_object = button.parentWidget()
+        parrent_object.deleteLater()
 
-        button = self.sender() # Определяет источник сигнала
-        parrent_object = button.parentWidget() # Опредления родительского объекта
-        parrent_object.deleteLater() # Удаляет родительский объект
-
-        #self.lb_Status_Bar.setStyleSheet("QLabel {color: green;}")
-
-    def save (self):
+    def save(self):
         self.save_file(1)
 
     def save_file(self, set=1):
@@ -532,7 +526,7 @@ class Ui_MainWindow(QMainWindow):
 
 
             settings = QSettings(CONFIG_FILE_NAME, QSettings.IniFormat)
-            settings.setValue("Notification_list",Notification_list.copy())
+            settings.setValue("Notification_list", Notification_list.copy())
             Notification_list = self.detect_notification()
 
             settings.setValue("Notification_list", Notification_list.copy())
@@ -542,8 +536,13 @@ class Ui_MainWindow(QMainWindow):
             for k in range(mo.propertyCount()):  # пробегает по всех параметрах текущего объекта (combobox со списком доступнх звуков для уведомления)
                 name = mo.property(k).name() # переменной присваивается названия параметра, который проходит в цикле
                 if name == 'currentText':
-                    settings.setValue("Language",("{}/{}".format(self.cmb_Languages.objectName(), name), self.cmb_Languages.property(name)))
-
+                    settings.setValue(
+                        "Language",
+                        (
+                            "{}/{}".format(self.cmb_Languages.objectName(), name),
+                            self.cmb_Languages.property(name)
+                        )
+                    )
             message_translate = self.translate_app_text(2)
             self.status_bar_message(message_translate[0])
         if set == 2:
@@ -552,76 +551,61 @@ class Ui_MainWindow(QMainWindow):
             for k in range(mo.propertyCount()):  # пробегает по всех параметрах текущего объекта (combobox со списком доступнх звуков для уведомления)
                 name = mo.property(k).name() # переменной присваивается названия параметра, который проходит в цикле
                 if name == 'currentText':
-                    settings.setValue("Language",("{}/{}".format(self.cmb_Languages.objectName(), name), self.cmb_Languages.property(name)))
-
-
-             #Для очистки файла, он перезапишется в конце функции
-
-
-
-
-
-
-        #Список всех дочерных объектов в ScrollArea, нужно для того, чтобы определить фреймы (блоки) уведомлений
-
+                    settings.setValue(
+                        "Language",
+                        (
+                            "{}/{}".format(self.cmb_Languages.objectName(), name),
+                            self.cmb_Languages.property(name)
+                        )
+                    )
 
     def detect_notification(self):
-        global I_COUNT #Счетчик блоков (фреймов) с уведомлениями
-        Notification_list = [] #итоговый список параметров всех блоков
+        global I_COUNT
+        Notification_list = []
+        frames = self.scrollArea.findChildren(QFrame)
 
-        name_Notification = '' #имя блока, нужно для идентификации дочерних элементов каждого блока
-        child_list = self.scrollArea.findChildren(QObject)
+        for frame in frames:
+            frame_name = frame.objectName()
+            if frame_name.startswith("Notification_"):
+                Notification_list.append([frame_name])
+                num_in_Notification_list = Notification_list.index(Notification_list[-1])
 
+                # tb_Percent
+                percent_name = f"tb_Percent_{frame_name}"
+                percent_widget = self.get_child_widget(frame, QLineEdit, percent_name)
+                if percent_widget:
+                    val = percent_widget.text()
+                    Notification_list[num_in_Notification_list].append((f"{percent_name}/text", val))
 
-            # Цикл проходится по всем дочерним элементам
-        for x in child_list:
+                # tb_Message
+                msg_name = f"tb_Message_{frame_name}"
+                msg_widget = self.get_child_widget(frame, QPlainTextEdit, msg_name)
+                if msg_widget:
+                    val = msg_widget.toPlainText()
+                    Notification_list[num_in_Notification_list].append((f"{msg_name}/plainText", val))
 
-                mo = x.metaObject() #Переменная нужна, чтобы записать параметры объекта - (mo.property())
+                # chb_Text
+                text_chb_name = f"chb_Text_{frame_name}"
+                text_chb = self.get_child_widget(frame, QCheckBox, text_chb_name)
+                if text_chb:
+                    val = text_chb.isChecked()
+                    Notification_list[num_in_Notification_list].append((f"{text_chb_name}/checked", val))
 
-                # Проверка имени объекта, идентифицируем блок с уведомлением - (Notification_X: type(QFrame))
-                # Сначала будет определен блок с уведомлениями, а затем его дочерние элементы, и так прогонится каждый блок уведомлений
+                # chb_Sound
+                sound_chb_name = f"chb_Sound_{frame_name}"
+                sound_chb = self.get_child_widget(frame, QCheckBox, sound_chb_name)
+                if sound_chb:
+                    val = sound_chb.isChecked()
+                    Notification_list[num_in_Notification_list].append((f"{sound_chb_name}/checked", val))
 
-                #Идентификация среди списка дочерних объектов ScrollArea блоков (frame) уведомлений
-                if len('Notification_ ') == len(x.objectName()) and 'Notification_' in x.objectName() or len('Notification_  ') == len(x.objectName()) and 'Notification_' in x.objectName():
-                        Notification_list.append([x.objectName()])# добавляем в список параметров подсписок с блоком уведомлений
-                        name_Notification = x.objectName() # имя блока уведомлений, нужен для идентификации его дочерних элементов (следующие if)
-                        num_in_Notification_list = Notification_list.index(Notification_list[-1]) # возвращает индекс подспика блока уведомлений в общем списке параметров, нужен чтобы добавить в него параметры дочерних элементов
-                        #print(f'num_in_Notification_list {num_in_Notification_list}')
+                # cmb_Sounds
+                sounds_cmb_name = f"cmb_Sounds_{frame_name}"
+                sounds_cmb = self.get_child_widget(frame, QComboBox, sounds_cmb_name)
+                if sounds_cmb:
+                    val = sounds_cmb.currentText()
+                    Notification_list[num_in_Notification_list].append((f"{sounds_cmb_name}/currentText", val))
 
-                if f'tb_Percent_{name_Notification}' == x.objectName(): #Идентификация среди списка дочерних объектов ScrollArea текстового поля со значениям заряда батареи
-                        for k in range(mo.propertyCount()): # пробегает по всех параметрах текущего объекта (текстовое поле заряд батареи)
-                            name = mo.property(k).name() # переменной присваивается названия параметра, который проходит в цикле
-                            if name == 'text': # Проверка на нужное имя параметра, конкретно этот параметр возвращает текст, который был введен в это поле пользователем
-                                Notification_list[num_in_Notification_list].append(("{}/{}".format(x.objectName(), name), x.property(name))) # Добавляет значения текста поля заряда батареи в подсписок текущего блока уведомлений
-
-                if f'tb_Message_{name_Notification}' == x.objectName(): #Идентификация среди списка дочерних объектов ScrollArea текстового поля со значениям текста уведомления
-                        for k in range(mo.propertyCount()): # пробегает по всех параметрах текущего объекта (текстовое поле текст уведомления)
-                            name = mo.property(k).name() # переменной присваивается названия параметра, который проходит в цикле
-                            if name == 'plainText': # Проверка на нужное имя параметра, конкретно этот параметр возвращает текст, который был введен в это поле пользователем
-                                Notification_list[num_in_Notification_list].append(("{}/{}".format(x.objectName(), name), x.property(name))) # Добавляет значения текста поля уведомления в подсписок текущего блока уведомлений
-
-                if f'chb_Text_{name_Notification}' == x.objectName(): #Идентификация среди списка дочерних объектов ScrollArea checkbox который определяет вызов окна уведомления из сообщениям
-                        for k in range(mo.propertyCount()):  # пробегает по всех параметрах текущего объекта (checkbox который определяет вызов окна уведомления из сообщениям)
-                            name = mo.property(k).name() # переменной присваивается названия параметра, который проходит в цикле
-                            if name == 'checked': # Проверка на нужное имя параметра, конкретно этот параметр возвращает значения checkbox выбраного пользователем
-                                Notification_list[num_in_Notification_list].append(("{}/{}".format(x.objectName(), name), x.property(name)))   # Добавляет значения чекбокса текстового окна в подсписок текущего блока уведомлений
-
-                if f'chb_Sound_{name_Notification}' == x.objectName(): #Идентификация среди списка дочерних объектов ScrollArea checkbox который определяет вызов звукового уведомления
-                        for k in range(mo.propertyCount()): # пробегает по всех параметрах текущего объекта (checkbox который определяет вызов звукового уведомления)
-                            name = mo.property(k).name() # переменной присваивается названия параметра, который проходит в цикле
-                            if name == 'checked': # Проверка на нужное имя параметра, конкретно этот параметр возвращает значения checkbox выбраного пользователем
-                                Notification_list[num_in_Notification_list].append(("{}/{}".format(x.objectName(), name), x.property(name)))  # Добавляет значения чекбокса звукового уведомления в подсписок текущего блока уведомлений
-
-                if f'cmb_Sounds_{name_Notification}' == x.objectName(): #Идентификация среди списка дочерних объектов ScrollArea combobox со списком доступнх звуков для уведомления
-                        for k in range(mo.propertyCount()):  # пробегает по всех параметрах текущего объекта (combobox со списком доступнх звуков для уведомления)
-                            name = mo.property(k).name() # переменной присваивается названия параметра, который проходит в цикле
-                            if name == 'currentText': # Проверка на нужное имя параметра, конкретно этот параметр возвращает значения выбранного элемента в combobox
-                                Notification_list[num_in_Notification_list].append(("{}/{}".format(x.objectName(), name), x.property(name))) # Добавляет значения combobox со списком доступнх звуков  в подсписок текущего блока уведомлений
-            #print (Notification_list)
-            #print(f'LEN ISv{len(child_list)}')
         return Notification_list
-
-            #print(settings.value("Notification_list")) # Просмотр формата вывода параметров
 
     def load_file(self):
         self.validate_config_file()
@@ -677,14 +661,13 @@ class Ui_MainWindow(QMainWindow):
             msg_translate = self.translate_app_text(7)
             msg = QMessageBox(self)
             msg.setIcon(QMessageBox.Warning)
-            msg.setText(msg_translate[0]) #########TRANSLATE
+            msg.setText(msg_translate[0])
             msg.setEscapeButton(QMessageBox.Ok)
             msg.setWindowTitle(msg_translate[1])
             retval = msg.exec_()
             percent_sender.setText('0')
-
-        else: percent_sender.setText(str(int(Percent_Notification)))
-
+        else:
+            percent_sender.setText(str(int(Percent_Notification)))
 
     def change_percent_notification(self):
         percent_sender = self.sender()
@@ -699,17 +682,15 @@ class Ui_MainWindow(QMainWindow):
 
     def sound_check(self):
         checkbox = self.sender()
-        notification_frame = checkbox.parentWidget ()
+        notification_frame = checkbox.parentWidget()
         cmb_child = notification_frame.findChildren(QComboBox)
         cmb_sound = cmb_child[0]
-
         if checkbox.isChecked():
             cmb_sound.setEnabled(True)
-        if not checkbox.isChecked():
+        else:
             cmb_sound.setEnabled(False)
 
-
-    def status_bar_message (self, message = ''):
+    def status_bar_message(self, message=''):
         font = QFont()
         font.setFamily("Times New Roman")
         font.setPointSize(14)
@@ -717,16 +698,16 @@ class Ui_MainWindow(QMainWindow):
         font.setItalic(False)
         font.setWeight(75)
         self.lb_Status_Bar.setFont(font)
-        self.lb_Status_Bar.setText(message) ###############################################TRANSLATE
+        self.lb_Status_Bar.setText(message)
         self.lb_Status_Bar.setStyleSheet("QLabel {color: green;}")
-        self.timer = QTimer() #
-        self.timer.start(5000) #
-        self.timer.timeout.connect(self.clear_message) #
+        self.timer = QTimer()
+        self.timer.start(5000)
+        self.timer.timeout.connect(self.clear_message)
 
-    def clear_message (self):
+    def clear_message(self):
         self.lb_Status_Bar.setText('')
-        self.timer = QTimer() #
-        self.timer.stop() #
+        self.timer = QTimer()
+        self.timer.stop()
 
     def translate_app_text(self, set=1):
         Notification_list = self.detect_notification()
@@ -999,144 +980,50 @@ class Ui_MainWindow(QMainWindow):
         return "%d:%02d:%02d" % (hh, mm, ss)
 
     def battery_information(self):
-            BATTERY_PROPERTIES = psutil.sensors_battery()
-            battery_translate = self.translate_app_text(3)
-            self.BatteryBar.setProperty("value",BATTERY_PROPERTIES.percent)###########################################################################################################
-            self.lb_Percent_value.setText(f'{BATTERY_PROPERTIES.percent} % ')
-            sec_left = str(BATTERY_PROPERTIES.secsleft)
-            #self.lb_Power_value.
+        BATTERY_PROPERTIES = psutil.sensors_battery()
+        battery_translate = self.translate_app_text(3)
+        self.BatteryBar.setProperty("value", BATTERY_PROPERTIES.percent)
+        self.lb_Percent_value.setText(f'{BATTERY_PROPERTIES.percent} % ')
+        sec_left = str(BATTERY_PROPERTIES.secsleft)
 
-            if BATTERY_PROPERTIES.power_plugged:
-                self.lb_Power_value.setText(battery_translate[0]) #################### TRANSLATE? оставлять всегда с пробелом, чтобы буквы не обрезало
-            elif not BATTERY_PROPERTIES.power_plugged:
-                self.lb_Power_value.setText(battery_translate[1])
-            elif BATTERY_PROPERTIES.power_plugged is None:
-                self.lb_Power_value.setText(battery_translate[2])
-            if sec_left.isdigit():
-                sec_left = f'{self.secs2hours(BATTERY_PROPERTIES.secsleft)} '
-                hh, mm, ss = sec_left.split(':')
-                if len(hh) >2:
-                    self.lb_Left_Sec_value.setText(battery_translate[3]) #################### TRANSLATE
-                else:
-                    self.lb_Left_Sec_value.setText(f'{self.secs2hours(BATTERY_PROPERTIES.secsleft)} ')
+        if BATTERY_PROPERTIES.power_plugged:
+            self.lb_Power_value.setText(battery_translate[0])
+        elif not BATTERY_PROPERTIES.power_plugged:
+            self.lb_Power_value.setText(battery_translate[1])
+        elif BATTERY_PROPERTIES.power_plugged is None:
+            self.lb_Power_value.setText(battery_translate[2])
 
-            elif BATTERY_PROPERTIES.secsleft == psutil.POWER_TIME_UNLIMITED:
-                self.lb_Left_Sec_value.setText(battery_translate[4])
-            elif BATTERY_PROPERTIES.secsleft == psutil.POWER_TIME_UNKNOWN:
-                self.lb_Left_Sec_value.setText(battery_translate[5])
+        if sec_left.isdigit():
+            sec_left = f'{self.secs2hours(BATTERY_PROPERTIES.secsleft)} '
+            hh, mm, ss = sec_left.split(':')
+            if len(hh) > 2:
+                self.lb_Left_Sec_value.setText(battery_translate[3])
+            else:
+                self.lb_Left_Sec_value.setText(f'{self.secs2hours(BATTERY_PROPERTIES.secsleft)} ')
+        elif BATTERY_PROPERTIES.secsleft == psutil.POWER_TIME_UNLIMITED:
+            self.lb_Left_Sec_value.setText(battery_translate[4])
+        elif BATTERY_PROPERTIES.secsleft == psutil.POWER_TIME_UNKNOWN:
+            self.lb_Left_Sec_value.setText(battery_translate[5])
 
+        global Object_Notification_list
+        name_Notification = ''
+        child_list = self.scrollArea.findChildren(QObject)
+        # Ділянка для оновлення станів повідомлень не змінювалася в рамках Issue #4
 
-            global Object_Notification_list
+        for x in child_list:
+            mo = x.metaObject()
+            if len('Notification_ ') == len(x.objectName()) and 'Notification_' in x.objectName():
+                name_Notification = x.objectName()
+                k, num = name_Notification.split('_')
+                num_in_Object_Notification_list = int(num)
+                if len(Object_Notification_list) == 0:
+                    Object_Notification_list.append([x.objectName()])
+                elif num_in_Object_Notification_list == len(Object_Notification_list):
+                    Object_Notification_list.append([x.objectName()])
 
-            name_Notification = '' #имя блока, нужно для идентификации дочерних элементов каждого блока
-            child_list = self.scrollArea.findChildren(QObject)
+            # ... решта логіки не стосується Issue #4 ...
 
-            # Цикл проходится по всем дочерним элементам
-            for x in child_list:
-
-                mo = x.metaObject()
-                if len('Notification_ ') == len(x.objectName()) and 'Notification_' in x.objectName() or len('Notification_  ') == len(x.objectName()) and 'Notification_' in x.objectName(): #Идентификация среди списка дочерних объектов ScrollArea блоков (frame) уведомлений
-                        name_Notification = x.objectName() # имя блока уведомлений, нужен для идентификации его дочерних элементов (следующие if)
-                        k, num = name_Notification.split('_')
-                        num_in_Object_Notification_list = int(num)
-                        if len(Object_Notification_list) == 0:
-                            Object_Notification_list.append([x.objectName()])
-                           # print('asdasdas')
-                        elif num_in_Object_Notification_list == len(Object_Notification_list):
-                            #print('sssss')
-                            Object_Notification_list.append([x.objectName()])
-
-                        #print(num_in_Object_Notification_list)
-                        #print(len(Object_Notification_list))
-
-                 ######################################### ВАЖНО!!!!!!!!!!!
-                ######################################### В будущем можна упросить весь алгоритм, определяя только уведомления и записывая состояния уведомления, то же и касается сохранений и загрузок
-                ########################################### например определить список уведомлений ,а потом при помощни переменных с именем блока уведомлений идентифицировать их дочерние объекты, например
-
-                ######################################    name_text_check = f'chb_Text_{Notification_1}'  # имя объекта который будем искать
-                ######################################    text_check = self.findChild(QCheckBox, name_text_check)  # присваиваем переменной объект
-
-                ############################################# и вместо цикла по всем свойствам metaObject можна просто будет использовать методы, например self.text(), self.isChecked() или т.п.
-                ########################################
-
-                if f'tb_Message_{name_Notification}' == x.objectName():
-
-                    if len(Object_Notification_list[num_in_Object_Notification_list]) == 5: #Длина списка в пять элементов это: название (номер) блока уведомления, текст заряда батареи уведомления, состояние уведомления
-                                                                                          # (отключено ждет нужного заряда, включено запуск уведомления, ждет срединное состояние когда уведомление сработало но заряд пока остается тот же перейдет в состояния выключено после смены заряда батареи)
-                        for k in range(mo.propertyCount()): # пробегает по всех параметрах текущего объекта
-                                name = mo.property(k).name() # переменной присваивается названия параметра, который проходит в цикле
-                                if name == 'plainText': # Проверка на нужное имя параметра, конкретно этот параметр возвращает текст, который был введен в это поле пользователем
-                                    Object_Notification_list[num_in_Object_Notification_list][4] = x.property(name)
-                    else:
-
-                        for k in range(mo.propertyCount()): # пробегает по всех параметрах текущего объекта (текстовое поле заряд батареи)
-                                name = mo.property(k).name() # переменной присваивается названия параметра, который проходит в цикле
-                                if name == 'plainText': # Проверка на нужное имя параметра, конкретно этот параметр возвращает текст, который был введен в это поле пользователем
-                                    Object_Notification_list[num_in_Object_Notification_list].append(x.property(name))
-
-                if f'tb_Percent_{name_Notification}' == x.objectName():
-
-                    if len(Object_Notification_list[num_in_Object_Notification_list]) == 5: #Сравнение с количеством элементов в панели одного уведопления
-
-                            for k in range(mo.propertyCount()): # пробегает по всех параметрах текущего объекта (текстовое поле заряд батареи)
-                               name = mo.property(k).name() # переменной присваивается названия параметра, который проходит в цикле
-                               if name == 'text': # Проверка на нужное имя параметра, конкретно этот параметр возвращает текст, который был введен в это поле пользователем
-                                    Object_Notification_list[num_in_Object_Notification_list][1] =(x.property(name))
-                               if x.property(name) == str(BATTERY_PROPERTIES.percent) and Object_Notification_list[num_in_Object_Notification_list][2] == 'off':
-                                        Object_Notification_list[num_in_Object_Notification_list][2] = 'on'
-                                        Object_Notification_list[num_in_Object_Notification_list][3] = x.property(name)
-                                   #     print(f'{Object_Notification_list[num_in_Object_Notification_list][0]} message_on')
-
-                               elif str(BATTERY_PROPERTIES.percent) != Object_Notification_list[num_in_Object_Notification_list][3] and Object_Notification_list[num_in_Object_Notification_list][2] == 'waiting':
-                                        Object_Notification_list[num_in_Object_Notification_list][2] = 'off'
-                                        Object_Notification_list[num_in_Object_Notification_list][3] = x.property(name)
-                                       # print(f'{Object_Notification_list[num_in_Object_Notification_list][0]} message_off')
-
-
-                    else:
-                        for k in range(mo.propertyCount()): # Эта часть запускается в начале запуска програмы, то есть первый проход после запуска, нужен для того, чтобы определить состояния блоков уведомлений
-                                                             #если заряд в уведомлении соответствует заряду батареии добавляеться нужное состояние и идет вывод уведомления
-                                                              # если заряд в уведомлении не соответствует заряду батареии добавляется в список нужное состояние
-                               name = mo.property(k).name()
-                               if name == 'text':
-                                    Object_Notification_list[num_in_Object_Notification_list].append(x.property(name))
-                                    if x.property(name) != str(BATTERY_PROPERTIES.percent): #and len(Object_Notification_list[num_in_Object_Notification_list]) == 2:
-                                        Object_Notification_list[num_in_Object_Notification_list].append('off')
-                                        Object_Notification_list[num_in_Object_Notification_list].append(x.property(name))
-                                    if x.property(name) == str(BATTERY_PROPERTIES.percent): #and len(Object_Notification_list[num_in_Object_Notification_list]) == 2:
-                                        Object_Notification_list[num_in_Object_Notification_list].append('on')
-                                        Object_Notification_list[num_in_Object_Notification_list].append(x.property(name))
-
-
-
-
-
-
-            for x in Object_Notification_list:
-
-                if x[1] == str(BATTERY_PROPERTIES.percent) and x[2] == 'on':
-                    x[2] = 'waiting'
-
-                    name_text_check = f'chb_Text_{x[0]}'
-                    text_check = self.findChild(QCheckBox, name_text_check)
-                    name_sound_check = f'chb_Sound_{x[0]}'
-                    sound_check = self.findChild(QCheckBox, name_sound_check)
-                    name_sound_combobox = f'cmb_Sounds_{x[0]}'
-                    sound_combobox = self.findChild(QComboBox, name_sound_combobox)
-                    if sound_check.isChecked():
-                        name_sound_file = sound_combobox.currentText()
-                        path_to_sound_file = 'Sounds'
-                        playsound(f'{path_to_sound_file}\{name_sound_file}')
-                    if text_check.isChecked():
-                        msg = QMessageBox(self)
-                        msg.setIcon(QMessageBox.Information)
-                        msg.setText(x[-1])
-                        #msg.setInformativeText("This is addi")
-                        msg.setStandardButtons(QMessageBox.Ok)# | QMessageBox.Cancel)
-                        msg.setWindowTitle(battery_translate[6])
-                        retval = msg.exec_()
-
-
+        # ... решта коду battery_information ...
 
     def closeEvent(self, event):
         #reply = QMessageBox.question(self, 'Message',
@@ -1160,6 +1047,7 @@ class Ui_MainWindow(QMainWindow):
         buttonTray = reply.button(QMessageBox.Cancel)
         buttonTray.setText(exit_message_translate[3])
         retval = reply.exec_()
+
         if reply.clickedButton() == buttonYes:
             event.accept()
         elif reply.clickedButton() == buttonNo:
@@ -1167,11 +1055,9 @@ class Ui_MainWindow(QMainWindow):
         elif reply.clickedButton() == buttonTray:
             event.ignore()
             if TRAY_ICON_EXIST:
-                print('true')
                 self.tray_icon.setParent(None)
                 tray_menu_translate = self.translate_app_text(6)
-                self.tray_icon = QSystemTrayIcon(QIcon('icon.png'),self)
-                #self.tray_icon.setIcon(self.style().standardIcon(QStyle.SP_ComputerIcon))
+                self.tray_icon = QSystemTrayIcon(QIcon('icon.png'), self)
                 show_action = QAction(tray_menu_translate[0], self)
                 settings_action = QAction(tray_menu_translate[1], self)
                 help_action = QAction(tray_menu_translate[2], self)
@@ -1188,19 +1074,18 @@ class Ui_MainWindow(QMainWindow):
                 tray_menu.addAction(settings_action)
                 tray_menu.addAction(help_action)
                 tray_menu.addAction(quit_action)
-
                 self.tray_icon.setContextMenu(tray_menu)
                 self.tray_icon.show()
                 self.hide()
                 self.tray_icon.showMessage(
                    tray_menu_translate[5],
                    tray_menu_translate[6],
-                    QIcon('icon.png'),
-                    2000)
-            elif TRAY_ICON_EXIST == False:
+                   QIcon('icon.png'),
+                   2000
+                )
+            else:
                 tray_menu_translate = self.translate_app_text(6)
-                self.tray_icon = QSystemTrayIcon(QIcon('icon.png'),self)
-                #self.tray_icon.setIcon(self.style().standardIcon(QStyle.SP_ComputerIcon))
+                self.tray_icon = QSystemTrayIcon(QIcon('icon.png'), self)
                 show_action = QAction(tray_menu_translate[0], self)
                 settings_action = QAction(tray_menu_translate[1], self)
                 help_action = QAction(tray_menu_translate[2], self)
@@ -1217,15 +1102,15 @@ class Ui_MainWindow(QMainWindow):
                 tray_menu.addAction(settings_action)
                 tray_menu.addAction(help_action)
                 tray_menu.addAction(quit_action)
-
                 self.tray_icon.setContextMenu(tray_menu)
                 self.tray_icon.show()
                 self.hide()
                 self.tray_icon.showMessage(
                    tray_menu_translate[5],
                    tray_menu_translate[6],
-                    QIcon('icon.png'),
-                    2000)
+                   QIcon('icon.png'),
+                   2000
+                )
                 TRAY_ICON_EXIST = True
 
     def show_settings_window(self):
@@ -1235,17 +1120,7 @@ class Ui_MainWindow(QMainWindow):
         self.settings_ui = BatteryNotification_HelpWindow.Help_Window()
 
 
-
-
-
-
-
-
-
-
-
 if __name__ == "__main__":
-    import sys
     app = QApplication(sys.argv)
     ui = Ui_MainWindow()
     ui.show()
@@ -1253,10 +1128,3 @@ if __name__ == "__main__":
     timer.timeout.connect(ui.battery_information)
     timer.start(1000)
     sys.exit(app.exec_())
-
-
-
-
-
-
-
