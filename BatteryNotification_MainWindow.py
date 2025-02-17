@@ -278,7 +278,7 @@ class Ui_MainWindow(QMainWindow):
         self.bt_Add_Notification.setText('+')
         self.bt_Add_Notification.setStyleSheet("color:green")
         self.bt_Add_Notification.setObjectName("bt_Add_Notification")
-        self.bt_Add_Notification.clicked.connect(self.resize_scrollAreaWidgetContents)
+        self.bt_Add_Notification.clicked.connect(self.add_notification_block)
         #self.bt_Add_Notification.clicked.connect(self.add_notification) # Приязка функции на клик по кнопке
 
 
@@ -331,7 +331,19 @@ class Ui_MainWindow(QMainWindow):
         self.bt_Save_Changes.setObjectName("bt_Save_Changes")
         self.bt_Save_Changes.clicked.connect(self.save) # Приязка функции на клик по кнопке
 
+    def add_notification_block(self):
+        self.add_notification()
+        self.height_scrollAreaWidgetContents += 100
+        self.resize_scrollAreaWidgetContents()
+        message_translate = self.translate_app_text(2)
+        self.status_bar_message(message_translate[1])
 
+    def remove_notification_block(self):
+        self.del_notification()
+        self.height_scrollAreaWidgetContents -= 100
+        self.resize_scrollAreaWidgetContents()
+        message_translate = self.translate_app_text(2)
+        self.status_bar_message(message_translate[2])
 
     def add_notification(self):
     # Эта функция добавляет в ScrollArea блоки с уведомлениями, здесь идет отрисовка блока и его дочерниз элементов
@@ -484,7 +496,7 @@ class Ui_MainWindow(QMainWindow):
 
         self.bt_Del_Notification.setText("–")
         self.bt_Del_Notification.setStyleSheet("color:red\n""")
-        self.bt_Del_Notification.clicked.connect(self.resize_scrollAreaWidgetContents)
+        self.bt_Del_Notification.clicked.connect(self.remove_notification_block)
         #self.bt_Del_Notification.clicked.connect(self.del_notification) # Привязка функции на клик по кнопке
         self.bt_Del_Notification.setObjectName(f"bt_Del_Notification_{I_COUNT}") # Присваивание уникального имени объекта
 
@@ -680,43 +692,10 @@ class Ui_MainWindow(QMainWindow):
         if not Percent_Notification.isalnum():
             percent_sender.setText('0')
 
-
-
     def resize_scrollAreaWidgetContents(self):
-        global I_COUNT
-        button_sender = self.sender()
-        #Notification_list = self.detect_notification()
-
-        if I_COUNT == 0:
-            self.height_scrollAreaWidgetContents = 0
-
-        if button_sender is None:
-            self.height_scrollAreaWidgetContents = I_COUNT * 100
-            self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 551, self.height_scrollAreaWidgetContents))
-            return self.height_scrollAreaWidgetContents
-
-
-        if 'bt_Add_Notification' in button_sender.objectName():
-            Notification_list = self.detect_notification()
-            self.height_scrollAreaWidgetContents = self.height_scrollAreaWidgetContents + 100
-            self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 551, self.height_scrollAreaWidgetContents))
-            self.add_notification()
-            #Notification_list = self.detect_notification()
-            message_translate = self.translate_app_text(2)
-            self.status_bar_message(message_translate[1])###############################################TRANSLATE
-
-        if 'bt_Del_Notification' in button_sender.objectName():
-            Notification_list = self.detect_notification()
-            self.height_scrollAreaWidgetContents = self.height_scrollAreaWidgetContents - 100
-            self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 551, self.height_scrollAreaWidgetContents))
-            self.del_notification()
-            #Notification_list = self.detect_notification()
-            message_translate = self.translate_app_text(2)
-            self.status_bar_message(message_translate[2]) ###############################################TRANSLATE
-
-
-        return self.height_scrollAreaWidgetContents
-
+        self.scrollAreaWidgetContents.setGeometry(
+            QRect(0, 0, 551, self.height_scrollAreaWidgetContents)
+        )
 
     def sound_check(self):
         checkbox = self.sender()
