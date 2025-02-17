@@ -612,49 +612,49 @@ class Ui_MainWindow(QMainWindow):
             #print(settings.value("Notification_list")) # Просмотр формата вывода параметров
 
     def load_file(self):
+        self.validate_config_file()
+        self.load_language_settings()
+        self.load_notifications_settings()
+
+    def validate_config_file(self):
         if not os.path.exists(CONFIG_FILE_NAME) or os.path.getsize(CONFIG_FILE_NAME) == 0:
             with open(CONFIG_FILE_NAME, 'w', encoding='utf-8') as f:
                 pass
             self.lb_Status_Bar.setText("Config file was missing or empty. A new file was created.")
             self.lb_Status_Bar.setStyleSheet("QLabel {color: red;}")
 
-        global I_COUNT
+    def load_language_settings(self):
         settings = QSettings(CONFIG_FILE_NAME, QSettings.IniFormat)
-
         Language_property = settings.value("Language")
         if Language_property is None:
-            return 0
-        if Language_property:
-            self.cmb_Languages.setCurrentText(Language_property[1])
+            return
+        self.cmb_Languages.setCurrentText(Language_property[1])
 
+    def load_notifications_settings(self):
+        global I_COUNT
+        settings = QSettings(CONFIG_FILE_NAME, QSettings.IniFormat)
         Load_Notification_list = settings.value("Notification_list")
         if Load_Notification_list is None:
-            return 0
+            return
 
-        if Load_Notification_list:
-            for notification in Load_Notification_list:
-                I_COUNT = Load_Notification_list.index(notification)
-                self.add_notification()
+        for notification in Load_Notification_list:
+            I_COUNT = Load_Notification_list.index(notification)
+            self.add_notification()
 
-                Percent_Notification = notification[1]
-                tb_Percent_Notification_TEXT = Percent_Notification[1]
-                self.tb_Percent_Notification.setText(tb_Percent_Notification_TEXT)
+            Percent_Notification = notification[1]
+            self.tb_Percent_Notification.setText(Percent_Notification[1])
 
-                Message_Notification = notification[2]
-                tb_Message_Notification_TEXT = Message_Notification[1]
-                self.tb_Message_Notification.setPlainText(tb_Message_Notification_TEXT)
+            Message_Notification = notification[2]
+            self.tb_Message_Notification.setPlainText(Message_Notification[1])
 
-                Text_Notification = notification[3]
-                chb_Text_Notification_CHECKED = bool(Text_Notification[1])
-                self.chb_Text_Notification.setChecked(chb_Text_Notification_CHECKED)
+            Text_Notification = notification[3]
+            self.chb_Text_Notification.setChecked(bool(Text_Notification[1]))
 
-                Sound_Notification = notification[4]
-                chb_Sound_Notification_CHECKED = bool(Sound_Notification[1])
-                self.chb_Sound_Notification.setChecked(chb_Sound_Notification_CHECKED)
+            Sound_Notification = notification[4]
+            self.chb_Sound_Notification.setChecked(bool(Sound_Notification[1]))
 
-                Sounds_Notification = notification[5]
-                cmb_Sounds_Notification_CURRENT_TEXT = Sounds_Notification[1]
-                self.cmb_Sounds_Notification.setCurrentText(cmb_Sounds_Notification_CURRENT_TEXT)
+            Sounds_Notification = notification[5]
+            self.cmb_Sounds_Notification.setCurrentText(Sounds_Notification[1])
 
         self.resize_scrollAreaWidgetContents()
 
