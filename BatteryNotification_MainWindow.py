@@ -5,7 +5,7 @@ from PyQt5.QtWidgets import *
 import time
 import psutil
 import os
-from playsound import playsound
+from sounds_utils import get_available_sounds, play_sound
 
 import BatteryNotification_HelpWindow
 import BatteryNotification_SettingsWindow
@@ -437,10 +437,10 @@ class Ui_MainWindow(QMainWindow):
         #self.cmb_Sounds_Notification.currentIndexChanged.connect(FUNCTION) ########## ############### Связь из функцией при каждом изменении выбранного элемента
         self.cmb_Sounds_Notification.setObjectName(f"cmb_Sounds_Notification_{I_COUNT}") # Присваивание уникального имени объекта
         # Добавление элементов в комбобокс
-        sounds = os.listdir(r"Sounds")
-        for x in sounds:
-            if x[-4:] == '.wav':
-                self.cmb_Sounds_Notification.addItem (x)
+        available_sounds = get_available_sounds("Sounds")
+        for sound_file in available_sounds:
+            self.cmb_Sounds_Notification.addItem(sound_file)
+
         #self.cmb_Sounds_Notification.addItem("")
         #self.cmb_Sounds_Notification.addItem("")
         #self.cmb_Sounds_Notification.addItem("")
